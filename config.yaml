@@ -1,0 +1,33 @@
+app:
+  name: chat-service
+  host: 0.0.0.0
+  port: 8080
+  environment: development
+  logLevel: debug
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres
+  name: chat
+  sslMode: disable
+
+kafka:
+  brokers:
+    - localhost:9092
+  consumerGroup: chat-service
+  topics:
+    chat: chat
+    message: message
+
+llm:
+  baseUrl: http://localhost:5000
+  timeout: 30s
+  model: gpt-4
+  maxTokens: 2048
+  apiKey: dev-api-key
+
+jwt:
+  secret: your-secret-key-here-replace-in-production
+  expiresIn: 24h

@@ -1,0 +1,174 @@
+###
+# Chat Service API Tests
+# This file contains HTTP requests for testing the chat and message APIs
+# You can use REST Client in VS Code or IntelliJ to run these requests
+###
+
+@baseUrl = http://localhost:8080/api/v1
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJld2R3ZCIsImlhdCI6MTc0NDI4MDM1MCwiZXhwIjoxNzQ0MzY2NzUwfQ.qk8OH31CvSTXjPd6jxFHdNdylRaBBFQzkW4Ups0l5bo
+###
+# Health check endpoint
+GET {{baseUrl}}/../health
+Content-Type: application/json
+
+###
+# CHAT API TESTS
+###
+
+# Create a new chat
+POST {{baseUrl}}/chats
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "title": "My first chat with GPT-4"
+}
+
+###
+
+# Get a specific chat by ID
+# Replace {id} with an actual chat ID
+GET {{baseUrl}}/chats/1
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+###
+
+# List all chats for the authenticated user
+GET {{baseUrl}}/chats?limit=10&offset=0
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+###
+
+# Search chats by title
+GET {{baseUrl}}/chats/search?query=GPT&limit=10&offset=0
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+###
+
+# Update a chat
+# Replace {id} with an actual chat ID
+PUT {{baseUrl}}/chats/1
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "title": "Updated chat title"
+}
+
+###
+
+# Delete a chat
+# Replace {id} with an actual chat ID
+DELETE {{baseUrl}}/chats/1
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+###
+# MESSAGE API TESTS
+###
+
+# Send a new message to a chat
+# Replace {chatId} with an actual chat ID
+POST {{baseUrl}}/messages?chatId=1
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "content": "Hello, tell me about artificial intelligence."
+}
+
+###
+
+# Get a specific message by ID
+# Replace {id} with an actual message ID
+GET {{baseUrl}}/messages/1
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+###
+
+# List all messages for a chat
+# Replace {chatId} with an actual chat ID
+GET {{baseUrl}}/messages?chatId=1&limit=50&offset=0
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+###
+
+# Update a message
+# Replace {id} with an actual message ID
+PUT {{baseUrl}}/messages/1
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "content": "Updated message content."
+}
+
+###
+
+# Delete a message
+# Replace {id} with an actual message ID
+DELETE {{baseUrl}}/messages/1
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+###
+# FLOW TEST EXAMPLE
+###
+
+# 1. Create a new chat
+POST {{baseUrl}}/chats
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "title": "AI Discussion"
+}
+
+> {%
+    client.global.set("chatId", response.body.id);
+%}
+
+###
+
+# 2. Send a message to the created chat
+POST {{baseUrl}}/messages?chatId={{chatId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "content": "What are the latest advancements in AI in 2025?"
+}
+
+> {%
+    client.global.set("messageId", response.body.id);
+%}
+
+###
+
+# 3. List all messages in the chat
+GET {{baseUrl}}/messages?chatId={{chatId}}&limit=50&offset=0
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+###
+
+# 4. Update the message
+PUT {{baseUrl}}/messages/{{messageId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "content": "What are the most significant AI breakthroughs of 2025?"
+}
+
+###
+
+# 5. Delete the chat when done (cleanup)
+DELETE {{baseUrl}}/chats/{{chatId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
