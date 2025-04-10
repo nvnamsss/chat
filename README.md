@@ -1,8 +1,14 @@
+# Introduction
+This repository is 95% AI, 5% human. It was created for the purpose of testing a new approach to backend development with the assistance of LLMs. It follows a set of guidelines composed from a real project by itself (`backend_development_guidelines.md`) but is primarily an experimental implementation to evaluate the effectiveness of LLM-assisted development giving.
+
+From my view, the can copy 85% of my style. The discrepancies are framework / libraries using in the repository. It would be improved if we have another context file named `software_requirements.md` declaring the software requirements. The additional requirements will help the LLM changes the implementation.
+
+Summary, `backend_development_guidelines.md` defines the architecture for the LLM, while `software_requirements.md` defines the framework / library for the LLM.
+
+
 # Chat Service
 
 A Go backend service that handles user chat interactions with LLM models. This service is responsible for managing chat sessions, storing message history, and communicating with an external LLM service.
-
-> **Note:** This service was created for the purpose of testing a new approach to backend development with the assistance of LLMs. It follows a set of guidelines composed from a real project (`backend_development_guidelines.md`) but is primarily an experimental implementation to evaluate the effectiveness of LLM-assisted development.
 
 ## Architecture
 
