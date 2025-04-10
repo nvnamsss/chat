@@ -3,7 +3,7 @@ This repository is 95% AI, 5% human. It was created for the purpose of testing a
 
 From my perspective, the LLM can replicate about 85% of my coding style. The discrepancies mainly stem from the frameworks and libraries used in the repository. This could be improved by introducing another context file named software_requirements.md, which would declare the necessary software dependencies. These additional requirements would guide the LLM in making more accurate implementation choices.
 
-In summary, backend_development_guidelines.md defines the architecture for the LLM, while software_requirements.md outlines the frameworks and libraries to be used.
+In summary, `backend_development_guidelines.md` defines the architecture for the LLM, while `software_requirements.md` outlines the frameworks and libraries to be used.
 
 
 # Chat Service
