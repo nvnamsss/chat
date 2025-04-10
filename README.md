@@ -1,9 +1,9 @@
 # Introduction
-This repository is 95% AI, 5% human. It was created for the purpose of testing a new approach to backend development with the assistance of LLMs. It follows a set of guidelines composed from a real project by itself (`backend_development_guidelines.md`) but is primarily an experimental implementation to evaluate the effectiveness of LLM-assisted development giving.
+This repository is 95% AI, 5% human. It was created for the purpose of testing a new approach to backend development with the assistance of LLMs. It follows a set of guidelines composed from a real project by itself (`backend_development_guidelines.md`), but is primarily an experimental implementation to evaluate the effectiveness of LLM-assisted development giving.
 
-From my view, the can copy 85% of my style. The discrepancies are framework / libraries using in the repository. It would be improved if we have another context file named `software_requirements.md` declaring the software requirements. The additional requirements will help the LLM changes the implementation.
+From my perspective, the LLM can replicate about 85% of my coding style. The discrepancies mainly stem from the frameworks and libraries used in the repository. This could be improved by introducing another context file named software_requirements.md, which would declare the necessary software dependencies. These additional requirements would guide the LLM in making more accurate implementation choices.
 
-Summary, `backend_development_guidelines.md` defines the architecture for the LLM, while `software_requirements.md` defines the framework / library for the LLM.
+In summary, backend_development_guidelines.md defines the architecture for the LLM, while software_requirements.md outlines the frameworks and libraries to be used.
 
 
 # Chat Service
