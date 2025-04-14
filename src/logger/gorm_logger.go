@@ -22,6 +22,7 @@ func NewGormLogger() logger.Interface {
 	return &GormLogger{
 		SlowThreshold:         200 * time.Millisecond,
 		SkipErrRecordNotFound: true,
+		SourceField:           "source",
 	}
 }
 

@@ -8,7 +8,7 @@ import (
 type Chat struct {
 	ID        int64     `gorm:"primaryKey;column:id"`
 	UserID    string    `gorm:"column:user_id;not null;index"`
-	Title     string    `gorm:"column:title;not null"`
+	Title     string    `gorm:"column:title;not null;check:title <> ''"`
 	Messages  []Message `gorm:"foreignKey:ChatID;constraint:OnDelete:CASCADE"`
 	CreatedAt time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt time.Time `gorm:"column:updated_at;not null"`
