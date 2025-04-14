@@ -5,7 +5,7 @@
 ###
 
 @baseUrl = http://localhost:8080/api/v1
-@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJld2R3ZCIsImlhdCI6MTc0NDI4MDM1MCwiZXhwIjoxNzQ0MzY2NzUwfQ.qk8OH31CvSTXjPd6jxFHdNdylRaBBFQzkW4Ups0l5bo
+@authToken = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzQ0NjEzMzAwLCJleHAiOjE3NDQ2OTk3MDB9.h9p57i3XNa8fy2HDkzNCvFgHk2BsQMZVEcg14dNjF_8
 ###
 # Health check endpoint
 GET {{baseUrl}}/../health

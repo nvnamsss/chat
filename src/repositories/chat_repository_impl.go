@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/nvnamsss/chat/src/errors"
 	"github.com/nvnamsss/chat/src/logger"
 	"github.com/nvnamsss/chat/src/models"
+	"gorm.io/gorm"
 )
 
 // chatRepository implements the ChatRepository interface
@@ -30,24 +30,10 @@ func (r *chatRepository) Create(ctx context.Context, chat *models.Chat) error {
 	chat.CreatedAt = now
 	chat.UpdatedAt = now
 
-	query := `
-		INSERT INTO chats (user_id, title, created_at, updated_at)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id
-	`
-
-	err := r.db.GetDB().QueryRowContext(
-		ctx,
-		query,
-		chat.UserID,
-		chat.Title,
-		chat.CreatedAt,
-		chat.UpdatedAt,
-	).Scan(&chat.ID)
-
-	if err != nil {
-		log.Errorw("Failed to create chat", "error", err)
-		return errors.Wrap(err, errors.ErrInternal, "Failed to create chat")
+	result := r.db.GetDB().WithContext(ctx).Create(chat)
+	if result.Error != nil {
+		log.Errorw("Failed to create chat", "error", result.Error)
+		return errors.Wrap(result.Error, errors.ErrInternal, "Failed to create chat")
 	}
 
 	return nil
@@ -58,20 +44,14 @@ func (r *chatRepository) Get(ctx context.Context, id int64) (*models.Chat, error
 	log := logger.Context(ctx)
 	var chat models.Chat
 
-	query := `
-		SELECT id, user_id, title, created_at, updated_at
-		FROM chats
-		WHERE id = $1
-	`
-
-	err := r.db.GetDB().GetContext(ctx, &chat, query, id)
-	if err != nil {
-		if err == sql.ErrNoRows {
+	result := r.db.GetDB().WithContext(ctx).First(&chat, id)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
 			log.Debugw("Chat not found", "id", id)
 			return nil, errors.New(errors.ErrNotFound, "Chat not found")
 		}
-		log.Errorw("Failed to get chat", "error", err, "id", id)
-		return nil, errors.Wrap(err, errors.ErrInternal, "Failed to get chat")
+		log.Errorw("Failed to get chat", "error", result.Error, "id", id)
+		return nil, errors.Wrap(result.Error, errors.ErrInternal, "Failed to get chat")
 	}
 
 	return &chat, nil
@@ -84,29 +64,23 @@ func (r *chatRepository) GetByUserID(ctx context.Context, userID string, limit, 
 	var total int64
 
 	// Get total count
-	countQuery := `
-		SELECT COUNT(*)
-		FROM chats
-		WHERE user_id = $1
-	`
-	err := r.db.GetDB().GetContext(ctx, &total, countQuery, userID)
-	if err != nil {
-		log.Errorw("Failed to count chats", "error", err, "userID", userID)
-		return nil, 0, errors.Wrap(err, errors.ErrInternal, "Failed to count chats")
+	result := r.db.GetDB().WithContext(ctx).Model(&models.Chat{}).Where("user_id = ?", userID).Count(&total)
+	if result.Error != nil {
+		log.Errorw("Failed to count chats", "error", result.Error, "userID", userID)
+		return nil, 0, errors.Wrap(result.Error, errors.ErrInternal, "Failed to count chats")
 	}
 
 	// Get chats with pagination
-	query := `
-		SELECT id, user_id, title, created_at, updated_at
-		FROM chats
-		WHERE user_id = $1
-		ORDER BY updated_at DESC
-		LIMIT $2 OFFSET $3
-	`
-	err = r.db.GetDB().SelectContext(ctx, &chats, query, userID, limit, offset)
-	if err != nil {
-		log.Errorw("Failed to get chats", "error", err, "userID", userID)
-		return nil, 0, errors.Wrap(err, errors.ErrInternal, "Failed to get chats")
+	result = r.db.GetDB().WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("updated_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&chats)
+
+	if result.Error != nil {
+		log.Errorw("Failed to get chats", "error", result.Error, "userID", userID)
+		return nil, 0, errors.Wrap(result.Error, errors.ErrInternal, "Failed to get chats")
 	}
 
 	return chats, total, nil
@@ -118,31 +92,24 @@ func (r *chatRepository) Search(ctx context.Context, req *dtos.SearchChatsReques
 	var chats []*models.Chat
 	var total int64
 
-	// Prepare search term for LIKE query
-	searchTerm := "%" + req.Query + "%"
+	db := r.db.GetDB().WithContext(ctx)
+	query := db.Model(&models.Chat{}).Where("user_id = ?", userID)
+
+	if req.Query != "" {
+		query = query.Where("title ILIKE ?", "%"+req.Query+"%")
+	}
 
 	// Get total count
-	countQuery := `
-		SELECT COUNT(*)
-		FROM chats
-		WHERE user_id = $1 AND title ILIKE $2
-	`
-	err := r.db.GetDB().GetContext(ctx, &total, countQuery, userID, searchTerm)
-	if err != nil {
+	if err := query.Count(&total).Error; err != nil {
 		log.Errorw("Failed to count chats in search", "error", err, "query", req.Query)
 		return nil, 0, errors.Wrap(err, errors.ErrInternal, "Failed to search chats")
 	}
 
-	// Get chats matching search term with pagination
-	query := `
-		SELECT id, user_id, title, created_at, updated_at
-		FROM chats
-		WHERE user_id = $1 AND title ILIKE $2
-		ORDER BY updated_at DESC
-		LIMIT $3 OFFSET $4
-	`
-	err = r.db.GetDB().SelectContext(ctx, &chats, query, userID, searchTerm, req.Limit, req.Offset)
-	if err != nil {
+	// Get chats with pagination
+	if err := query.Order("updated_at DESC").
+		Limit(req.Limit).
+		Offset(req.Offset).
+		Find(&chats).Error; err != nil {
 		log.Errorw("Failed to search chats", "error", err, "query", req.Query)
 		return nil, 0, errors.Wrap(err, errors.ErrInternal, "Failed to search chats")
 	}
@@ -155,24 +122,17 @@ func (r *chatRepository) Update(ctx context.Context, chat *models.Chat) error {
 	log := logger.Context(ctx)
 	chat.UpdatedAt = time.Now()
 
-	query := `
-		UPDATE chats
-		SET title = $1, updated_at = $2
-		WHERE id = $3
-	`
+	result := r.db.GetDB().WithContext(ctx).Model(chat).Updates(map[string]interface{}{
+		"title":      chat.Title,
+		"updated_at": chat.UpdatedAt,
+	})
 
-	result, err := r.db.GetDB().ExecContext(ctx, query, chat.Title, chat.UpdatedAt, chat.ID)
-	if err != nil {
-		log.Errorw("Failed to update chat", "error", err, "id", chat.ID)
-		return errors.Wrap(err, errors.ErrInternal, "Failed to update chat")
+	if result.Error != nil {
+		log.Errorw("Failed to update chat", "error", result.Error, "id", chat.ID)
+		return errors.Wrap(result.Error, errors.ErrInternal, "Failed to update chat")
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return errors.Wrap(err, errors.ErrInternal, "Failed to get rows affected")
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return errors.New(errors.ErrNotFound, fmt.Sprintf("Chat with ID %d not found", chat.ID))
 	}
 
@@ -183,45 +143,35 @@ func (r *chatRepository) Update(ctx context.Context, chat *models.Chat) error {
 func (r *chatRepository) Delete(ctx context.Context, id int64) error {
 	log := logger.Context(ctx)
 
-	// Start a transaction to delete the chat and all its messages
-	tx, err := r.db.GetDB().BeginTxx(ctx, nil)
-	if err != nil {
-		log.Errorw("Failed to begin transaction", "error", err)
-		return errors.Wrap(err, errors.ErrInternal, "Failed to begin transaction")
+	// Start a transaction
+	tx := r.db.GetDB().WithContext(ctx).Begin()
+	if tx.Error != nil {
+		log.Errorw("Failed to begin transaction", "error", tx.Error)
+		return errors.Wrap(tx.Error, errors.ErrInternal, "Failed to begin transaction")
 	}
+
+	// Rollback transaction on error
 	defer func() {
-		if err != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				log.Errorw("Failed to rollback transaction", "error", rollbackErr)
-			}
+		if r := recover(); r != nil {
+			tx.Rollback()
 		}
 	}()
 
-	// Delete all messages for the chat
-	_, err = tx.ExecContext(ctx, "DELETE FROM messages WHERE chat_id = $1", id)
-	if err != nil {
-		log.Errorw("Failed to delete messages for chat", "error", err, "chatID", id)
-		return errors.Wrap(err, errors.ErrInternal, "Failed to delete messages")
+	// Delete the chat (messages will be deleted automatically due to ON DELETE CASCADE)
+	result := tx.Delete(&models.Chat{}, id)
+	if result.Error != nil {
+		tx.Rollback()
+		log.Errorw("Failed to delete chat", "error", result.Error, "id", id)
+		return errors.Wrap(result.Error, errors.ErrInternal, "Failed to delete chat")
 	}
 
-	// Delete the chat
-	result, err := tx.ExecContext(ctx, "DELETE FROM chats WHERE id = $1", id)
-	if err != nil {
-		log.Errorw("Failed to delete chat", "error", err, "id", id)
-		return errors.Wrap(err, errors.ErrInternal, "Failed to delete chat")
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return errors.Wrap(err, errors.ErrInternal, "Failed to get rows affected")
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
+		tx.Rollback()
 		return errors.New(errors.ErrNotFound, fmt.Sprintf("Chat with ID %d not found", id))
 	}
 
 	// Commit the transaction
-	if err = tx.Commit(); err != nil {
+	if err := tx.Commit().Error; err != nil {
 		log.Errorw("Failed to commit transaction", "error", err)
 		return errors.Wrap(err, errors.ErrInternal, "Failed to commit transaction")
 	}

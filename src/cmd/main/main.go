@@ -12,8 +12,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/nvnamsss/chat/src/adapters"
 	"github.com/nvnamsss/chat/src/configs"
@@ -21,6 +19,7 @@ import (
 	"github.com/nvnamsss/chat/src/dtos"
 	"github.com/nvnamsss/chat/src/logger"
 	"github.com/nvnamsss/chat/src/middlewares"
+	"github.com/nvnamsss/chat/src/models"
 	"github.com/nvnamsss/chat/src/repositories"
 	"github.com/nvnamsss/chat/src/services"
 )
@@ -54,9 +53,9 @@ func main() {
 	}
 	defer dbAdapter.Close()
 
-	// Run database migrations
-	if err := runMigrations(dbAdapter, "/home/namnv/git/chat/src/migrations"); err != nil {
-		logger.Fatal("Failed to run migrations", logger.Field("error", err))
+	// Run GORM auto-migrations
+	if err := dbAdapter.AutoMigrate(&models.Chat{}, &models.Message{}); err != nil {
+		logger.Fatal("Failed to run auto-migrations", logger.Field("error", err))
 	}
 
 	// Initialize Kafka producer
@@ -136,27 +135,27 @@ func main() {
 }
 
 // runMigrations runs database migrations
-func runMigrations(dbAdapter adapters.DBAdapter, migrationsPath string) error {
-	db := dbAdapter.GetDB().DB
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		return fmt.Errorf("failed to create migration driver: %w", err)
-	}
+// func runMigrations(dbAdapter adapters.DBAdapter, migrationsPath string) error {
+// 	db := dbAdapter.GetDB().DB
+// 	driver, err := postgres.WithInstance(db, &postgres.Config{})
+// 	if err != nil {
+// 		return fmt.Errorf("failed to create migration driver: %w", err)
+// 	}
 
-	// Add "file://" prefix to make it a proper URL with scheme
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://"+migrationsPath,
-		"postgres", driver)
-	if err != nil {
-		return fmt.Errorf("failed to create migration instance: %w", err)
-	}
+// 	// Add "file://" prefix to make it a proper URL with scheme
+// 	m, err := migrate.NewWithDatabaseInstance(
+// 		"file://"+migrationsPath,
+// 		"postgres", driver)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to create migration instance: %w", err)
+// 	}
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("failed to run migrations: %w", err)
-	}
+// 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+// 		return fmt.Errorf("failed to run migrations: %w", err)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // setupKafka initializes the Kafka producer
 func setupKafka(cfg configs.Config) services.KafkaProducer {

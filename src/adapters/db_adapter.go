@@ -4,34 +4,45 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/nvnamsss/chat/src/configs"
 	"github.com/nvnamsss/chat/src/logger"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 // DBAdapter defines the interface for database operations
 type DBAdapter interface {
-	GetDB() *sqlx.DB
+	GetDB() *gorm.DB
 	Close() error
 	Ping(ctx context.Context) error
+	AutoMigrate(models ...interface{}) error
 }
 
 // dbAdapter implements the DBAdapter interface
 type dbAdapter struct {
-	db *sqlx.DB
+	db *gorm.DB
 }
 
 // NewDBAdapter creates a new database adapter
 func NewDBAdapter(config configs.Database) (DBAdapter, error) {
-	db, err := sqlx.Connect("postgres", config.DSN())
+	// Configure GORM
+	gormConfig := &gorm.Config{
+		Logger: logger.NewGormLogger(),
+	}
+
+	// Connect to database
+	db, err := gorm.Open(postgres.Open(config.DSN()), gormConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	// Configure connection pool
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get underlying *sql.DB: %w", err)
+	}
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(5)
 
 	logger.Info("Connected to database",
 		logger.Field("host", config.Host),
@@ -41,17 +52,30 @@ func NewDBAdapter(config configs.Database) (DBAdapter, error) {
 }
 
 // GetDB returns the database connection
-func (a *dbAdapter) GetDB() *sqlx.DB {
+func (a *dbAdapter) GetDB() *gorm.DB {
 	return a.db
 }
 
 // Close closes the database connection
 func (a *dbAdapter) Close() error {
 	logger.Info("Closing database connection")
-	return a.db.Close()
+	sqlDB, err := a.db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get underlying *sql.DB: %w", err)
+	}
+	return sqlDB.Close()
 }
 
 // Ping checks the database connection
 func (a *dbAdapter) Ping(ctx context.Context) error {
-	return a.db.PingContext(ctx)
+	sqlDB, err := a.db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get underlying *sql.DB: %w", err)
+	}
+	return sqlDB.PingContext(ctx)
+}
+
+// AutoMigrate runs GORM auto-migration for the given models
+func (a *dbAdapter) AutoMigrate(models ...interface{}) error {
+	return a.db.AutoMigrate(models...)
 }
